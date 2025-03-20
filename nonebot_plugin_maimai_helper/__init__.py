@@ -1,15 +1,24 @@
+import nonebot
 from nonebot import on_command, on_regex, on_startswith
-from nonebot.adapters.onebot.v11 import GroupMessageEvent, Message
+from nonebot.adapters.onebot.v11 import GroupMessageEvent, Message, MessageSegment
 from nonebot.params import EventMessage
 from nonebot.permission import SUPERUSER
+from nonebot.rule import to_me
+from nonebot.plugin import on_command
+from nonebot.log import logger
+from datetime import datetime, timedelta
 
-from helper.simai import *
-from util.utils import *
-from helper.diving_fish import *
-from update_music_list import *
+from .helper.simai import *
+from .util.utils import *
+from .helper.diving_fish import *
+from .update_music_list import *
+from .util.database import *
 
 config = nonebot.get_driver().config
 TICKET = getattr(config, 'ticket', True)
+
+# 初始化数据库
+init_db()
 
 def check_time() -> bool:
 
@@ -30,7 +39,7 @@ maihelp = on_command('maihelp', priority=20)
 g_login = on_command('login', priority=20, rule=check_time)
 g_logout = on_command('logout', priority=20, rule=check_time)
 tickets = on_command('ticket',aliases={'查票'}, priority=20, rule=check_time)
-trick = on_command('舞萌足迹', priority=20, rule=check_time)
+trick = on_command('舞萌足迹',aliases={'region'}, priority=20, rule=check_time)
 token_bind = on_command("bind", priority=20, rule=check_time)
 gb = on_command("gb", priority=20, rule=check_time)
 up_list = on_command('uplist', priority=20, permission=SUPERUSER)
@@ -91,7 +100,7 @@ async def _(event: GroupMessageEvent, message: Message = EventMessage()):
                 f"旅行伙伴名称：\t{data['data']['charaName']}\n"
                 f"旅行伙伴等级：\t{data['data']['charaLevel']}\n"
                 f"旅行伙伴觉醒数：\t{data['data']['charaAwakening']}\n"
-                f"banState：\t{data['data']['banState']}\n"
+                f"banState：\t{data['data']['banState']}"
             )
                                 ])
         else:
@@ -117,26 +126,26 @@ async def _(event: GroupMessageEvent, message: Message = EventMessage()):
 @maihelp.handle()
 async def _(event: GroupMessageEvent, message: Message = EventMessage()):
     await maihelp.send(
-        "maimai插件帮助 - Ver.1.2.6\n"
+        #"maimai插件帮助 - Ver.1.2.6\n"
         "绑定账号 - 发送二维码解析出来的内容 - SGWCMAID123456\n"
         "查询账号 - 发送'seeme'\n"
-        "发2/3/5/6倍券 - 发送'发券2/3/5/6'\n"
-        "(发券7 可发送中二·舞萌联合2倍券)\n"
-        "查询账户内剩余功能票 - 发送'ticket'\n"
+        #"2/3/5/6倍票 - 发送'/st2/3/5/6'\n"
+        #"(发券7 可发送中二·舞萌联合2倍券)\n"
+        "查询功能票 - 发送'ticket'\n"
         "登入账号 - 发送login\n"
         "登出账号 - 发送logout(仅限通过本机器人登入的账号)\n"
-        "游玩足迹 - 发送'舞萌足迹'\n"
-        "绑定查分器 - 发送'bind+查分器token'\n"
-        "更新b50 - 发送'gb'\n"
-        "更新水鱼乐曲列表 - 发送'uplist'(仅限机修)\n"
-        "请勿在凌晨三点至凌晨七点内使用本Bot！！\n"
+        "游玩足迹 - 发送'region'\n"
+        "绑定水鱼 - 发送'bind+查分器token'\n"
+        "更新水鱼 - 发送'gb'\n"
+        #"更新水鱼乐曲列表 - 发送'uplist'(仅限机修)\n"
+        "请勿在凌晨三点至凌晨七点内使用本Bot！！"
     )
 
 
-ticket = on_regex(r"发券(\d+)", priority=20, rule=is_ticket_enable)
+ticket = on_regex(r"/st(\d+)", priority=20, rule=is_ticket_enable)
 @ticket.handle()
 async def _(event: GroupMessageEvent, message: Message = EventMessage()):
-    regex = r"发券(\d+)"
+    regex = r"/st(\d+)"
     user_qq = event.get_user_id()
     user_id = None
     ticket_id = None
@@ -251,7 +260,7 @@ async def _(event: GroupMessageEvent, message: Message = EventMessage()):
             elif ticket['chargeId'] == 6:
                 ticketlist.append(MessageSegment.text(f"您有6倍券:{ticket['stock']}张\n"))
             elif ticket['chargeId'] == 20020:
-                ticketlist.append(MessageSegment.text(f"您有联合券:{ticket['stock']}张\n"))
+                ticketlist.append(MessageSegment.text(f"您有联合券:{ticket['stock']}张"))
         await tickets.send(ticketlist)
     else:
         await tickets.send([MessageSegment.reply(event.message_id), MessageSegment.text("先绑定账号叭")])
@@ -269,11 +278,12 @@ async def _(event: GroupMessageEvent, message: Message = EventMessage()):
     if USERID:
         tricklist = [MessageSegment.reply(event.message_id),]
         data = get_user_region(user_id)['data']['userRegionList']
+        
         for place in data:
             tricklist.append(
                 MessageSegment.text(
-                    f"您在{place['regionName']}游玩过{place['playCount']}次\n"
-                    f"最初游玩时间为{place['created']}\n"
+                    f"\n{place['regionName']}：{place['playCount']}次\n"
+                    f"初次：{place['created']}\n"
                 )
             )
         await trick.send(tricklist)
