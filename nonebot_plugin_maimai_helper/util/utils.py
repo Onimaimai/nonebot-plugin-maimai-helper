@@ -1,16 +1,8 @@
-import pymysql
 import nonebot
-
-
 from nonebot.log import logger
-
+from .database import is_userid_exist, get_userid, save_user_id, del_user_id, is_token_exist, get_token, save_user_token
 
 config = nonebot.get_driver().config
-db_host = getattr(config, 'db_host', 'localhost')
-db_user = getattr(config, 'db_user', 'root')
-db_pass = getattr(config, 'db_pass', '<PASSWORD>')
-db = getattr(config, 'db_name', 'aime')
-
 
 def is_hex_string(s):
     return all(c in {'e', '4', '1', '6', '7', 'c', '8', '2', '0', '5', 'b', 'd', 'a', 'f', '9', '3'} for c in s)
@@ -70,54 +62,6 @@ def find_chara_awakening(all_chara_list, chara_slot_list):
             character_awakening[i] = awakening
 
     return character_awakening
-
-
-def is_userid_exist(user_qq):
-    """
-    根据QQ号查询userid是否在数据库内
-
-    :param user_qq: 用户QQ号
-    """
-    conn = pymysql.connect(host=db_host, port=3306, user=db_user, passwd=db_pass, db=db, charset='utf8')
-    try:
-        with conn.cursor() as cursor:
-            logger.debug(f"开始查询数据库是否有QQ号:{user_qq}对应USER_ID")
-            sql = 'select * from id where qq = %s'
-            result = cursor.execute(sql, (user_qq,))
-            if result > 0:
-                logger.success("查询成功")
-                return True
-            else:
-                logger.success("查询无结果")
-                return False
-    except Exception as e:
-        logger.error(f"USER_ID查询失败:{e}")
-        return False
-    finally:
-        conn.close()
-
-
-def del_user_id(user_qq, user_id):
-    """
-    删除对应QQ的USERID
-
-    :param user_qq: 用户QQ号
-    :param user_id: 用户USER_ID
-    """
-    conn = pymysql.connect(host=db_host, port=3306, user=db_user, passwd=db_pass, db=db, charset='utf8')
-    try:
-        with conn.cursor() as cursor:
-            logger.debug(f"开始删除QQ:{user_qq}对应USERID:{user_id}")
-            sql = 'delete from id where qq = %s'
-            cursor.execute(sql, (user_id,))
-            conn.commit()
-            logger.success("删除失败")
-            return True
-    except Exception as e:
-        logger.error(f"删除QQ:{user_qq}对应ID{user_id}失败:{e}")
-        return False
-    finally:
-        conn.close()
 
 
 def save_user_id(user_qq, user_id):
