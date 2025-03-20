@@ -1,6 +1,6 @@
 import nonebot
 from nonebot.log import logger
-from .database import is_userid_exist, get_userid, save_user_id, del_user_id, is_token_exist, get_token, save_user_token
+from .database import *
 
 config = nonebot.get_driver().config
 
